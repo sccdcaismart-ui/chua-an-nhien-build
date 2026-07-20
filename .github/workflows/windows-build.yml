@@ -1,0 +1,49 @@
+name: Build Chua An Nhien Windows
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+
+jobs:
+  build-windows:
+    runs-on: windows-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Extract source
+        shell: powershell
+        run: |
+          Expand-Archive -Path "ChuaAnNhien_Source_v1.0.0.zip" -DestinationPath "app" -Force
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: app/package-lock.json
+
+      - name: Setup Rust
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Install dependencies
+        working-directory: app
+        run: npm ci
+
+      - name: Test frontend
+        working-directory: app
+        run: npm test
+
+      - name: Build Windows application
+        working-directory: app
+        shell: powershell
+        run: npm run release:windows
+
+      - name: Upload installers
+        uses: actions/upload-artifact@v4
+        with:
+          name: ChuaAnNhien-Windows-x64
+          path: app/release/*
+          if-no-files-found: error
